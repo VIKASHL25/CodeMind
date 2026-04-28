@@ -19,9 +19,12 @@ app.add_middleware(
 
 @app.post("/analyse/code")
 async def analyse_code(question:str=Form(...),code:str=Form(...)):
+    api_key=None
     state:AgentState={
         "user_question":question,
         "mode":"code",
+        "api_key":api_key,
+        "language":"python", # default for REST
         "code_input":code,
         "csv_data":None,
         "csv_filename":None,
@@ -40,9 +43,12 @@ async def analyse_code(question:str=Form(...),code:str=Form(...)):
 async def analyse_data(question:str=Form(...),file:UploadFile=File(...)):
     contents=await file.read()
     csv_str=contents.decode("utf-8")
+    api_key=None
     state:AgentState={
         "user_question":question,
         "mode":"data",
+        "api_key":api_key,
+        "language":None,
         "code_input":None,
         "csv_data":csv_str,
         "csv_filename":file.filename,
@@ -70,10 +76,14 @@ async def ws_analyse(websocket:WebSocket):
         csv_data=data.get("csv_data","")
         filename=data.get("filename","data.csv")
         
+        api_key=data.get("api_key", None)
+        lang=data.get("language", "python")
         
         state:AgentState={
                 "user_question":question,
                 "mode":mode,
+                "api_key":api_key,
+                "language":lang if mode=="code" else None,
                 "code_input":code if mode=="code" else None,
                 "csv_data":csv_data if mode=="data" else None,
                 "csv_filename":filename,

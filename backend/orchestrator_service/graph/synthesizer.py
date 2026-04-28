@@ -8,8 +8,9 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-llm=ChatGroq(model="llama-3.3-70b-versatile",temperature=0.3,api_key=os.getenv("GROQ_API_KEY"))
-
+def get_llm(state: AgentState, temperature: float = 0.3):
+    api_key = state.get("api_key") or os.getenv("GROQ_API_KEY")
+    return ChatGroq(model="llama-3.3-70b-versatile", temperature=temperature, api_key=api_key)
 
 async def syntesizer_node(state:AgentState)->AgentState:
     agent_outputs=[]
@@ -21,15 +22,20 @@ async def syntesizer_node(state:AgentState)->AgentState:
     mode=state.get("mode","code")
     question=state.get("user_question","")
 
+    direct_response = state.get("routing_decision", {}).get("direct_response")
+    if direct_response:
+        return {**state, "final_response": direct_response}
+
 
     improved_code_section = ""
     requirements_section = ""
     additional_section = ""
 
     if mode == "code":
-        improved_code_section = """## Improved Code
-```python
-<fully corrected production-ready code>
+        lang = state.get("language", "python")
+        improved_code_section = f"""## Improved Code
+```{lang}
+<fully corrected production-ready code in {lang}>
 ```"""
 
         requirements_section = """
@@ -110,6 +116,7 @@ IMPORTANT:
 - Output ONLY the specified sections
 - Do NOT add extra explanations
 """
+    llm = get_llm(state)
     response=await llm.ainvoke([
         SystemMessage(content=system),
         HumanMessage(content=f"User question: {question}\n\nAgent findings:\n{combined}")

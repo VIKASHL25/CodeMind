@@ -8,7 +8,9 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-llm=ChatGroq(model="llama-3.3-70b-versatile",temperature=0.2,api_key=os.getenv("GROQ_API_KEY"))
+def get_llm(state: AgentState, temperature: float = 0.2):
+    api_key = state.get("api_key") or os.getenv("GROQ_API_KEY")
+    return ChatGroq(model="llama-3.3-70b-versatile", temperature=temperature, api_key=api_key)
 
 def make_code_agent(agent_name: str, system_prompt: str):
     async def agent(state: AgentState) -> AgentState:
@@ -31,6 +33,7 @@ def make_code_agent(agent_name: str, system_prompt: str):
             }
         }
 
+        llm = get_llm(state)
         # Call LLM
         response = await llm.ainvoke([
             SystemMessage(content=system_prompt),

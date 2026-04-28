@@ -10,6 +10,8 @@ class AgentState(TypedDict):
     #INput
     user_question:str
     mode:str     #code/data
+    api_key:Optional[str]
+    language:Optional[str]
     code_input:Optional[str] #pasted code
     csv_data:Optional[str]
     csv_filname:Optional[str]
@@ -17,6 +19,7 @@ class AgentState(TypedDict):
     #Routing
     routing_decision:dict  
     llm_reasoning:str
+    direct_response:Optional[str]
 
     #agent stream
     def merge_dicts(a, b):

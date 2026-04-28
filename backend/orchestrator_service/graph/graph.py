@@ -11,7 +11,8 @@ from .data_agents import (
     insight_agent_node, viz_suggester_node
 )
 from .synthesizer import syntesizer_node
-
+from dotenv import load_dotenv
+load_dotenv()   
 
 AGENT_NODE_MAP = {
     "bug_hunter":bug_hunter_node,
@@ -26,6 +27,8 @@ AGENT_NODE_MAP = {
 
 def fan_out(state:AgentState):
     agents=state.get("routing_decision",{}).get("agents_to_invoke",[])
+    if not agents:
+        return [Send("synthesizer", state)]
     return [Send(agent,state)for agent in agents if agent in AGENT_NODE_MAP]
 
 def build_graph():
@@ -51,6 +54,3 @@ def build_graph():
     return graph.compile()
 
 codemind_graph=build_graph()
-# print("Mermaid--------------------------------")
-# print(codemind_graph.get_graph().draw_mermaid())
-# print("--------------------------------")

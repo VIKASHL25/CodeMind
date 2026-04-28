@@ -8,7 +8,9 @@ from dotenv import load_dotenv
 import re
 load_dotenv()
 
-llm=ChatGroq(model="llama-3.3-70b-versatile",temperature=0.1,api_key=os.getenv("GROQ_API_KEY"))
+def get_llm(state: AgentState, temperature: float = 0.1):
+    api_key = state.get("api_key") or os.getenv("GROQ_API_KEY")
+    return ChatGroq(model="llama-3.3-70b-versatile", temperature=temperature, api_key=api_key)
 
 CODE_AGENTS=["bug_hunter","code_reviewer","security_auditor","doc_writer"]
 DATA_AGENTS=["data_profiler","stats_analyst","insight_agent","viz_suggester"]
@@ -40,11 +42,13 @@ IMPORTANT RULES:
 - If user asks for security → include security_auditor
 - If user says "no documentation" → DO NOT include doc_writer
 - Prefer multiple agents if multiple intents exist
+- CRITICAL: If the question is ambiguous, general chit-chat, or completely unrelated to code analysis or data analysis (e.g. "hi", "how are you", "what is the capital of France"), DO NOT invoke any agents. Set "agents_to_invoke" to an empty array [] and provide a polite "direct_response" replying to the user.
 
 Respond ONLY with valid JSON like:
 {{
 "agents_to_invoke": ["agent1", "agent2"],
-"reason": "why these agents were chosen"
+"reason": "why these agents were chosen",
+"direct_response": "Optional polite reply if question is completely unrelated"
 }}"""
 
     human = f"User question:{question}"
@@ -54,6 +58,7 @@ Respond ONLY with valid JSON like:
     else:
         human += f"\n\nCSV preview:\n{state.get('csv_data','')[:1000]}"
 
+    llm = get_llm(state)
     response = await llm.ainvoke([
         SystemMessage(content=system),
         HumanMessage(content=human)
@@ -83,20 +88,22 @@ Respond ONLY with valid JSON like:
 
     # ✅ Optional: enforce rule-based correction (VERY IMPORTANT)
     q = question.lower()
+    
+    # Do not force agents if the LLM explicitly decided to route it as a direct_response
+    if not decision.get("direct_response"):
+        forced_agents = []
 
-    forced_agents = []
+        if "bug" in q:
+            forced_agents.append("bug_hunter")
+        if "review" in q:
+            forced_agents.append("code_reviewer")
+        if "security" in q:
+            forced_agents.append("security_auditor")
+        if "document" in q and "not" not in q:
+            forced_agents.append("doc_writer")
 
-    if "bug" in q:
-        forced_agents.append("bug_hunter")
-    if "review" in q:
-        forced_agents.append("code_reviewer")
-    if "security" in q:
-        forced_agents.append("security_auditor")
-    if "document" in q and "not" not in q:
-        forced_agents.append("doc_writer")
-
-    if forced_agents:
-        decision["agents_to_invoke"] = list(set(forced_agents))
+        if forced_agents:
+            decision["agents_to_invoke"] = list(set(forced_agents))
 
     # ✅ Initialize streams ALWAYS
     agent_streams = {}

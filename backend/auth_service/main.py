@@ -1,4 +1,4 @@
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException,Header
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from passlib.context import CryptContext
@@ -57,11 +57,10 @@ async def login(data:UserLogin):
     }
 
 @app.get("/verify")
-async def verify(token:str):
+async def verify(authorization: str = Header(...)):
     try:
-        payload=jwt.decode(token,SECRET,algorithms=["HS256"])
-        return {"email":payload["email"],"valid":True}
-    
+        token = authorization.replace("Bearer ", "")
+        payload = jwt.decode(token, SECRET, algorithms=["HS256"])
+        return {"email": payload["email"], "valid": True}
     except:
-        raise HTTPException(401,"invalid token")
-    
+        raise HTTPException(401, "invalid token")

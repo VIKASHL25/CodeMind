@@ -5,26 +5,32 @@ import httpx
 app = FastAPI(title="CodeMind Gateway")
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173",
-                   "https://your-app.vercel.app"],
+    allow_origins=["http://localhost:5173"],
+    allow_credentials=True,   
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
-AUTH_SERVICE="htttp://localhost:8001"
+AUTH_SERVICE="http://localhost:8001"
 ORCHESTRATOR_SERVICE="http://localhost:8002"
 
 
 #auth middleware
-async def verify_token(request:Request):
-    token=request.headers.get("Authorization","").replace("Bearer","")
-    if not token:
-        raise HTTPException(401,"No token provided")
+async def verify_token(request: Request):
+    auth_header=request.headers.get("Authorization")
+
+    if not auth_header:
+        raise HTTPException(401, "No token provided")
+
     async with httpx.AsyncClient() as client:
-        res=await client.get(f"{AUTH_SERVICE}/verify",params={"token":token})
-        if res.status_code!=200:
-            raise HTTPException(401,"Invalid token")
-        return res.json()
+        res=await client.get(
+            f"{AUTH_SERVICE}/verify",
+            headers={"Authorization": auth_header}   
+        )
+
+    if res.status_code!=200:
+        raise HTTPException(401,"Invalid token")
+
+    return res.json()
     
 #auth routes 
 @app.post("/auth/signup")
@@ -67,3 +73,7 @@ async def analyze_data(request: Request):
         )
         return res.json()
 
+@app.get("/auth/me")
+async def get_me(request: Request):
+    user = await verify_token(request)
+    return user

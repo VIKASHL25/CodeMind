@@ -8,8 +8,9 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-llm=ChatGroq(model="llama-3.3-70b-versatile",temperature=0.2,api_key=os.getenv("GROQ_API_KEY"))
-
+def get_llm(state: AgentState, temperature: float = 0.2):
+    api_key = state.get("api_key") or os.getenv("GROQ_API_KEY")
+    return ChatGroq(model="llama-3.3-70b-versatile", temperature=temperature, api_key=api_key)
 
 async def data_profile_node(state:AgentState)->AgentState:
     if "data_profiler" not in state.get("routing_decision",{}).get("agents_to_invoke",[]):
@@ -21,6 +22,7 @@ async def data_profile_node(state:AgentState)->AgentState:
     csvdata=state.get("csv_data","")
     question=state.get("user_question","")
 
+    llm = get_llm(state)
     response=await llm.ainvoke([
         SystemMessage(content="""You are a data profiling expert. Analyze the CSV data and provide:
 1. Dataset shape (rows, columns)
@@ -46,6 +48,7 @@ async def stats_analyst_node(state:AgentState)->AgentState:
     streams=dict(state.get("agent_streams",{}))
     streams["stats_analyst"]={"status":"streaming","content":"","timestamp":datetime.utcnow().isoformat()}
     
+    llm = get_llm(state)
     response=await llm.ainvoke([
         SystemMessage(content="""You are a statistical analysis expert. Analyze the data and identify:
 1. Distributions of key columns (normal, skewed, bimodal?)
@@ -69,6 +72,7 @@ async def insight_agent_node(state:AgentState)->AgentState:
     streams=dict(state.get("agent_streams",{}))
     streams["insight_agent"]={"status":"streaming","content":"","timestamp":datetime.utcnow().isoformat()}
 
+    llm = get_llm(state)
     response=await llm.ainvoke([
         SystemMessage(content="""You are a business intelligence expert. From this data:
 1. Identify the top 3-5 business insights
@@ -95,6 +99,7 @@ async def viz_suggester_node(state:AgentState)->AgentState:
     streams=dict(state.get("agent_streams",{}))
     streams["viz_suggester"]={"status":"streaming","content":"","timestamp":datetime.utcnow().isoformat()}
 
+    llm = get_llm(state)
     response=await llm.ainvoke([
         SystemMessage(content="""You are a data visualization expert.
 Based on the user question and data, generate:
