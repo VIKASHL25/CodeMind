@@ -2,6 +2,7 @@ from fastapi import FastAPI, Request, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 import httpx
 import os
+import asyncio
 
 app = FastAPI(title="CodeMind Gateway")
 CORS_ORIGINS = [
@@ -24,6 +25,27 @@ AUTH_SERVICE         = os.getenv("AUTH_SERVICE",         "http://localhost:8001"
 ORCHESTRATOR_SERVICE = os.getenv("ORCHESTRATOR_SERVICE", "http://localhost:8002")
 print("GATEWAY AUTH_SERVICE:", AUTH_SERVICE)
 print("GATEWAY ORCHESTRATOR_SERVICE:", ORCHESTRATOR_SERVICE)
+
+
+async def ping_service(url: str):
+    try:
+        async with httpx.AsyncClient(timeout=2.0) as client:
+            await client.get(url)
+    except Exception:
+        pass
+
+def trigger_backend_wakeup():
+    asyncio.create_task(ping_service(f"{AUTH_SERVICE}/"))
+    asyncio.create_task(ping_service(f"{ORCHESTRATOR_SERVICE}/"))
+
+@app.on_event("startup")
+async def startup_event():
+    trigger_backend_wakeup()
+
+@app.middleware("http")
+async def wakeup_middleware(request: Request, call_next):
+    trigger_backend_wakeup()
+    return await call_next(request)
 
 
 async def forward_request(res: httpx.Response):
