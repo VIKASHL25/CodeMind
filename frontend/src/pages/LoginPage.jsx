@@ -1,9 +1,13 @@
-import { useState } from "react";
-import { login, signup } from "../api";
+import { useState, useEffect } from "react";
+import { login, signup, ping } from "../api";
 import { useAuth } from "../context/AuthContext";
 
 export default function LoginPage() {
   const [isLogin, setIsLogin] = useState(true);
+
+  useEffect(() => {
+    ping().catch(() => {});
+  }, []);
   const [form,    setForm]    = useState({ name: "", email: "", password: "" });
   const [error,   setError]   = useState("");
   const [loading, setLoading] = useState(false);

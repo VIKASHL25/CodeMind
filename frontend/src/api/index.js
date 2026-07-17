@@ -37,3 +37,4 @@ export const signup      = (d) => API.post("/auth/signup", d);
 export const login       = (d) => API.post("/auth/login",  d);
 export const analyzeCode = (d) => API.post("/analyze/code", d);
 export const analyzeData = (d) => API.post("/analyze/data", d);
+export const ping        = () => API.get("/");
