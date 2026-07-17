@@ -1,7 +1,7 @@
 from fastapi import FastAPI, HTTPException,Header
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
-from passlib.context import CryptContext
+import bcrypt
 from jose import jwt
 from datetime import datetime, timedelta
 import motor.motor_asyncio, os
@@ -13,7 +13,7 @@ app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], all
 
 client=motor.motor_asyncio.AsyncIOMotorClient(os.getenv("MONGO_URL"))
 db=client[os.getenv("DB_NAME")]
-pwd= CryptContext(schemes=["bcrypt"])
+# CryptContext removed, using bcrypt directly
 SECRET=os.getenv("SECRET_KEY", "changeme")
 
 class UserSignup(BaseModel):
@@ -32,7 +32,7 @@ async def signup(data:UserSignup):
     await db["users"].insert_one({
         "name":data.name,
         "email":data.email,
-        "password":pwd.hash(data.password),
+        "password":bcrypt.hashpw(data.password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8'),
         "created_at":datetime.utcnow()
     })
 
@@ -45,7 +45,7 @@ async def signup(data:UserSignup):
 @app.post("/login",status_code=200)
 async def login(data:UserLogin):
     user=await db["users"].find_one({"email":data.email})
-    if not user or not pwd.verify(data.password,user["password"]):
+    if not user or not bcrypt.checkpw(data.password.encode('utf-8'), user["password"].encode('utf-8')):
         raise HTTPException(401,"Invalid credentials")
     token=jwt.encode(
         {"email":data.email,"exp":datetime.utcnow()+timedelta(days=2)},
