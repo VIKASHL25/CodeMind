@@ -127,7 +127,7 @@ Generate 2-3 charts maximum. Make data realistic based on the CSV."""),
         HumanMessage(content=f"Question: {state['user_question']}\n\nCSV Data:\n{state.get('csv_data','')[:3000]}\nFilename: {state.get('csv_filename','data.csv')}")
     ])
 
-    # Parse the JSON response
+    
     content=response.content
     chart_configs=[]
     pandas_code=""

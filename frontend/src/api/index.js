@@ -1,6 +1,10 @@
 import axios from "axios";
 
-const API = axios.create({ baseURL: "http://localhost:8000" });
+// In Docker: empty baseURL = same origin (Nginx handles routing)
+// In dev: http://localhost:8000
+const API = axios.create({
+  baseURL: import.meta.env.VITE_API_URL || ""
+});
 
 API.interceptors.request.use(config => {
   const token = localStorage.getItem("token");

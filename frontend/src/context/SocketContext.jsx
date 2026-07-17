@@ -6,8 +6,9 @@ export function SocketProvider({ children }) {
   const ws = useRef(null);
 
   const connectAndAnalyze = (payload, callbacks) => {
-    const WS_URL = import.meta.env.VITE_WS_URL;
-    ws.current   = new WebSocket(`${WS_URL}/ws/analyze`);
+    const WS_URL = import.meta.env.VITE_WS_URL ||
+    (window.location.protocol === "https:" ? "wss://" : "ws://") + window.location.host;
+      ws.current = new WebSocket(`${WS_URL}/ws/analyze`);
 
     ws.current.onopen = () => {
       ws.current.send(JSON.stringify(payload));

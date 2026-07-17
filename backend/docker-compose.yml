@@ -1,0 +1,82 @@
+services:
+
+  mongo:
+    image: mongo:6
+    container_name: codemind-mongo
+    restart: always
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo_data:/data/db
+    networks:
+      - codemind-network
+
+  auth-service:
+    build:
+      context: ./auth_service
+      dockerfile: Dockerfile
+    container_name: codemind-auth
+    restart: always
+    ports:
+      - "8001:8001"
+    environment:
+      - MONGO_URL=mongodb+srv://root:Vikashl%401036@vikashl.ys860ze.mongodb.net/?appName=VIKASHL
+      - DB_NAME=codemind
+    depends_on:
+      - mongo
+    networks:
+      - codemind-network
+
+  orchestrator-service:
+    build:
+      context: ./orchestrator_service
+      dockerfile: Dockerfile
+    container_name: codemind-orchestrator
+    restart: always
+    ports:
+      - "8002:8002"
+    environment:
+      - MONGO_URL=mongodb+srv://root:Vikashl%401036@vikashl.ys860ze.mongodb.net/?appName=VIKASHL
+      - DB_NAME=codemind
+    depends_on:
+      - mongo
+    networks:
+      - codemind-network
+
+  gateway:
+    build:
+      context: ./gateway
+      dockerfile: Dockerfile
+    container_name: codemind-gateway
+    restart: always
+    ports:
+      - "8000:8000"
+    environment:
+      - AUTH_SERVICE=http://auth-service:8001
+      - ORCHESTRATOR_SERVICE=http://orchestrator-service:8002
+    depends_on:
+      - auth-service
+      - orchestrator-service
+    networks:
+      - codemind-network
+
+  frontend:
+    build:
+      context: ../frontend
+      dockerfile: Dockerfile
+    container_name: codemind-frontend
+    restart: always
+    ports:
+      - "80:80"
+    depends_on:
+      - gateway
+      - orchestrator-service
+    networks:
+      - codemind-network
+
+networks:
+  codemind-network:
+    driver: bridge
+
+volumes:
+  mongo_data:

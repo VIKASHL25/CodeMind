@@ -7,17 +7,19 @@ from datetime import datetime
 
 app=FastAPI(title="CodeMind")
 
+import os
+
+CORS_ORIGINS = os.getenv("CORS_ORIGINS", "http://localhost:5173,https://your-app.vercel.app").split(",")
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173",
-                   "https://your-app.vercel.app"],
+    allow_origins=CORS_ORIGINS,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
 #REST endpoints -analyse code
 
-@app.post("/analyse/code")
+@app.post("/analyze/code")
 async def analyse_code(question:str=Form(...),code:str=Form(...)):
     api_key=None
     state:AgentState={
@@ -39,7 +41,7 @@ async def analyse_code(question:str=Form(...),code:str=Form(...)):
     return result
 
 #analyse csv
-@app.post("/analyse/data")
+@app.post("/analyze/data")
 async def analyse_data(question:str=Form(...),file:UploadFile=File(...)):
     contents=await file.read()
     csv_str=contents.decode("utf-8")
