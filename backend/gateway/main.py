@@ -36,6 +36,22 @@ async def forward_request(res: httpx.Response):
     except Exception:
         raise HTTPException(status_code=500, detail=f"Backend service did not return JSON: {res.text}")
 
+async def safe_request(method: str, url: str, **kwargs):
+    async with httpx.AsyncClient(timeout=120) as client:
+        try:
+            if method.lower() == "post":
+                res = await client.post(url, **kwargs)
+            elif method.lower() == "get":
+                res = await client.get(url, **kwargs)
+            else:
+                res = await client.request(method, url, **kwargs)
+            return await forward_request(res)
+        except (httpx.ConnectError, httpx.ConnectTimeout, httpx.ReadTimeout) as e:
+            raise HTTPException(
+                status_code=503,
+                detail="The backend service is waking up from sleep mode. Please try again in 10-15 seconds."
+            )
+
 #auth middleware
 async def verify_token(request: Request):
     auth_header=request.headers.get("Authorization")
@@ -43,31 +59,31 @@ async def verify_token(request: Request):
     if not auth_header:
         raise HTTPException(401, "No token provided")
 
-    async with httpx.AsyncClient() as client:
-        res=await client.get(
-            f"{AUTH_SERVICE}/verify",
-            headers={"Authorization": auth_header}   
+    try:
+        async with httpx.AsyncClient() as client:
+            res=await client.get(
+                f"{AUTH_SERVICE}/verify",
+                headers={"Authorization": auth_header}   
+            )
+        if res.status_code!=200:
+            raise HTTPException(401,"Invalid token")
+        return await forward_request(res)
+    except (httpx.ConnectError, httpx.ConnectTimeout, httpx.ReadTimeout):
+        raise HTTPException(
+            status_code=503,
+            detail="The authentication service is waking up from sleep mode. Please try again in a few seconds."
         )
-
-    if res.status_code!=200:
-        raise HTTPException(401,"Invalid token")
-
-    return await forward_request(res)
     
 #auth routes 
 @app.post("/auth/signup")
 async def signup(request: Request):
     body = await request.json()
-    async with httpx.AsyncClient() as client:
-        res = await client.post(f"{AUTH_SERVICE}/signup", json=body)
-        return await forward_request(res)
+    return await safe_request("post", f"{AUTH_SERVICE}/signup", json=body)
 
 @app.post("/auth/login")
 async def login(request: Request):
     body = await request.json()
-    async with httpx.AsyncClient() as client:
-        res = await client.post(f"{AUTH_SERVICE}/login", json=body)
-        return await forward_request(res)
+    return await safe_request("post", f"{AUTH_SERVICE}/login", json=body)
 
 
 # Analyze routes 
@@ -75,25 +91,23 @@ async def login(request: Request):
 async def analyze_code(request: Request):
     await verify_token(request)
     form = await request.form()
-    async with httpx.AsyncClient(timeout=120) as client:
-        res = await client.post(
-            f"{ORCHESTRATOR_SERVICE}/analyze/code",
-            data={"question": form["question"], "code": form["code"]}
-        )
-        return await forward_request(res)
+    return await safe_request(
+        "post",
+        f"{ORCHESTRATOR_SERVICE}/analyze/code",
+        data={"question": form["question"], "code": form["code"]}
+    )
 
 
 @app.post("/analyze/data")
 async def analyze_data(request: Request):
     await verify_token(request)
     form = await request.form()
-    async with httpx.AsyncClient(timeout=120) as client:
-        res = await client.post(
-            f"{ORCHESTRATOR_SERVICE}/analyze/data",
-            data={"question": form["question"]},
-            files={"file": (form["file"].filename, await form["file"].read())}
-        )
-        return await forward_request(res)
+    return await safe_request(
+        "post",
+        f"{ORCHESTRATOR_SERVICE}/analyze/data",
+        data={"question": form["question"]},
+        files={"file": (form["file"].filename, await form["file"].read())}
+    )
 
 @app.get("/auth/me")
 async def get_me(request: Request):
