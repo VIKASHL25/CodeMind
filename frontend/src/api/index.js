@@ -1,7 +1,6 @@
 import axios from "axios";
 
-// In Docker: empty baseURL = same origin (Nginx handles routing)
-// In dev: http://localhost:8000
+
 const API = axios.create({
   baseURL: import.meta.env.VITE_API_URL || ""
 });
@@ -21,10 +20,9 @@ API.interceptors.response.use(
         if (!error.response.data) {
           error.response.data = {};
         }
-        error.response.data.detail = "The backend service is waking up from sleep mode. This can take up to a minute. Please try again in 1-2 minutes.";
+        error.response.data.detail = "The backend service is waking up from sleep mode. This can take up to a minutes. Please try again in 1-2 minutes.";
       }
     } else if (error.request) {
-      // Network/timeout error when server is sleeping and not responding
       error.response = {
         data: {
           detail: "The backend service is waking up from sleep mode. Please try again in 1-2 minutes."

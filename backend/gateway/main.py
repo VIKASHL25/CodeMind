@@ -22,6 +22,8 @@ app.add_middleware(
 
 AUTH_SERVICE         = os.getenv("AUTH_SERVICE",         "http://localhost:8001")
 ORCHESTRATOR_SERVICE = os.getenv("ORCHESTRATOR_SERVICE", "http://localhost:8002")
+print("GATEWAY AUTH_SERVICE:", AUTH_SERVICE)
+print("GATEWAY ORCHESTRATOR_SERVICE:", ORCHESTRATOR_SERVICE)
 
 
 async def forward_request(res: httpx.Response):
@@ -47,6 +49,9 @@ async def safe_request(method: str, url: str, **kwargs):
                 res = await client.request(method, url, **kwargs)
             return await forward_request(res)
         except (httpx.ConnectError, httpx.ConnectTimeout, httpx.ReadTimeout) as e:
+            print(f"CONNECTION ERROR to {url}: {str(e)}")
+            import traceback
+            traceback.print_exc()
             raise HTTPException(
                 status_code=503,
                 detail="The backend service is waking up from sleep mode. Please try again in 10-15 seconds."
@@ -68,7 +73,10 @@ async def verify_token(request: Request):
         if res.status_code!=200:
             raise HTTPException(401,"Invalid token")
         return await forward_request(res)
-    except (httpx.ConnectError, httpx.ConnectTimeout, httpx.ReadTimeout):
+    except (httpx.ConnectError, httpx.ConnectTimeout, httpx.ReadTimeout) as e:
+        print(f"CONNECTION ERROR during token verification: {str(e)}")
+        import traceback
+        traceback.print_exc()
         raise HTTPException(
             status_code=503,
             detail="The authentication service is waking up from sleep mode. Please try again in a few seconds."
