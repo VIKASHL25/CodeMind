@@ -24,6 +24,18 @@ AUTH_SERVICE         = os.getenv("AUTH_SERVICE",         "http://localhost:8001"
 ORCHESTRATOR_SERVICE = os.getenv("ORCHESTRATOR_SERVICE", "http://localhost:8002")
 
 
+async def forward_request(res: httpx.Response):
+    if res.status_code >= 400:
+        try:
+            detail = res.json()
+        except Exception:
+            detail = res.text
+        raise HTTPException(status_code=res.status_code, detail=detail)
+    try:
+        return res.json()
+    except Exception:
+        raise HTTPException(status_code=500, detail=f"Backend service did not return JSON: {res.text}")
+
 #auth middleware
 async def verify_token(request: Request):
     auth_header=request.headers.get("Authorization")
@@ -40,7 +52,7 @@ async def verify_token(request: Request):
     if res.status_code!=200:
         raise HTTPException(401,"Invalid token")
 
-    return res.json()
+    return await forward_request(res)
     
 #auth routes 
 @app.post("/auth/signup")
@@ -48,14 +60,14 @@ async def signup(request: Request):
     body = await request.json()
     async with httpx.AsyncClient() as client:
         res = await client.post(f"{AUTH_SERVICE}/signup", json=body)
-        return res.json()
+        return await forward_request(res)
 
 @app.post("/auth/login")
 async def login(request: Request):
     body = await request.json()
     async with httpx.AsyncClient() as client:
         res = await client.post(f"{AUTH_SERVICE}/login", json=body)
-        return res.json()
+        return await forward_request(res)
 
 
 # Analyze routes 
@@ -68,7 +80,7 @@ async def analyze_code(request: Request):
             f"{ORCHESTRATOR_SERVICE}/analyze/code",
             data={"question": form["question"], "code": form["code"]}
         )
-        return res.json()
+        return await forward_request(res)
 
 
 @app.post("/analyze/data")
@@ -81,7 +93,7 @@ async def analyze_data(request: Request):
             data={"question": form["question"]},
             files={"file": (form["file"].filename, await form["file"].read())}
         )
-        return res.json()
+        return await forward_request(res)
 
 @app.get("/auth/me")
 async def get_me(request: Request):
