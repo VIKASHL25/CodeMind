@@ -11,6 +11,10 @@ load_dotenv()
 app=FastAPI(title="CodeMind Auth Service")
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
 
+@app.get("/")
+async def root():
+    return {"status": "ok", "service": "auth"}
+
 client=motor.motor_asyncio.AsyncIOMotorClient(os.getenv("MONGO_URL"))
 db=client[os.getenv("DB_NAME")]
 # CryptContext removed, using bcrypt directly

@@ -23,6 +23,10 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+@app.get("/")
+async def root():
+    return {"status": "ok", "service": "orchestrator"}
+
 #REST endpoints -analyse code
 
 @app.post("/analyze/code")

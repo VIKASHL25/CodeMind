@@ -29,7 +29,7 @@ print("GATEWAY ORCHESTRATOR_SERVICE:", ORCHESTRATOR_SERVICE)
 
 async def ping_service(url: str):
     try:
-        async with httpx.AsyncClient(timeout=2.0) as client:
+        async with httpx.AsyncClient(timeout=60.0) as client:
             await client.get(url)
     except Exception:
         pass
