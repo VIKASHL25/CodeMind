@@ -9,7 +9,13 @@ app=FastAPI(title="CodeMind")
 
 import os
 
-CORS_ORIGINS = os.getenv("CORS_ORIGINS", "http://localhost:5173,https://your-app.vercel.app").split(",")
+CORS_ORIGINS = [
+    origin.strip().rstrip("/")
+    for origin in os.getenv("CORS_ORIGINS", "http://localhost:5173,https://your-app.vercel.app").split(",")
+    if origin.strip()
+]
+print("ALLOWED CORS ORIGINS:", CORS_ORIGINS)
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=CORS_ORIGINS,

@@ -4,7 +4,13 @@ import httpx
 import os
 
 app = FastAPI(title="CodeMind Gateway")
-CORS_ORIGINS = os.getenv("CORS_ORIGINS", "http://localhost:5173").split(",")
+CORS_ORIGINS = [
+    origin.strip().rstrip("/")
+    for origin in os.getenv("CORS_ORIGINS", "http://localhost:5173").split(",")
+    if origin.strip()
+]
+print("ALLOWED CORS ORIGINS:", CORS_ORIGINS)
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=CORS_ORIGINS,
