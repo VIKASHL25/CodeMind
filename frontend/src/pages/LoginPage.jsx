@@ -21,6 +21,10 @@ export default function LoginPage() {
     setLoading(true);
     setError("");
     try {
+      await fetch("https://codemind-auth-49n6.onrender.com/", {
+        mode: "no-cors", 
+      });
+      await new Promise(resolve => setTimeout(resolve, 5000));
       const res = isLogin
         ? await login({ email: form.email, password: form.password })
         : await signup(form);
