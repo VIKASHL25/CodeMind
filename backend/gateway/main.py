@@ -30,7 +30,8 @@ print("GATEWAY ORCHESTRATOR_SERVICE:", ORCHESTRATOR_SERVICE)
 async def ping_service(url: str):
     print(f"BACKGROUND WAKE-UP: Pinging {url} to wake it up...")
     try:
-        async with httpx.AsyncClient(timeout=60.0) as client:
+        # verify=False bypasses SSL certificate check for wake-up pings to prevent handshake failures
+        async with httpx.AsyncClient(timeout=60.0, verify=False) as client:
             res = await client.get(url)
             print(f"BACKGROUND WAKE-UP: Ping to {url} returned status {res.status_code}")
     except Exception as e:
@@ -106,6 +107,11 @@ async def verify_token(request: Request):
             detail="The authentication service is waking up from sleep mode. Please try again in a few seconds."
         )
     
+# root route for wake-up pings
+@app.get("/")
+async def root():
+    return {"status": "ok", "service": "gateway"}
+
 #auth routes 
 @app.post("/auth/signup")
 async def signup(request: Request):
