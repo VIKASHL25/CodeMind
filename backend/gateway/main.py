@@ -66,18 +66,34 @@ async def ping_service(url: str, service_name: str):
         elif service_name == "orchestrator":
             is_pinging_orchestrator = False
 
-def trigger_backend_wakeup():
-    asyncio.create_task(ping_service(f"{AUTH_SERVICE}/", "auth"))
-    asyncio.create_task(ping_service(f"{ORCHESTRATOR_SERVICE}/", "orchestrator"))
+async def wait_until_service_ready(url: str, service_name: str):
+    retries = 20
 
-@app.on_event("startup")
-async def startup_event():
-    trigger_backend_wakeup()
+    async with httpx.AsyncClient(timeout=10) as client:
+        for i in range(retries):
+            try:
+                response = await client.get(f"{url}/")
 
-@app.middleware("http")
-async def wakeup_middleware(request: Request, call_next):
-    trigger_backend_wakeup()
-    return await call_next(request)
+                if response.status_code == 200:
+                    print(f"{service_name} is awake.")
+                    return
+
+                print(
+                    f"{service_name} not ready "
+                    f"({response.status_code}) "
+                    f"Attempt {i+1}/{retries}"
+                )
+
+            except Exception:
+                pass
+
+            await asyncio.sleep(3)
+
+    raise HTTPException(
+        status_code=503,
+        detail=f"{service_name} is waking up. Please try again."
+    )
+
 
 
 async def forward_request(res: httpx.Response):
@@ -93,6 +109,14 @@ async def forward_request(res: httpx.Response):
         raise HTTPException(status_code=500, detail=f"Backend service did not return JSON: {res.text}")
 
 async def safe_request(method: str, url: str, **kwargs):
+    if url.startswith(AUTH_SERVICE):
+        await wait_until_service_ready(AUTH_SERVICE, "Auth Service")
+
+    elif url.startswith(ORCHESTRATOR_SERVICE):
+        await wait_until_service_ready(
+            ORCHESTRATOR_SERVICE,
+            "Orchestrator Service"
+        )
     async with httpx.AsyncClient(timeout=120) as client:
         try:
             if method.lower() == "post":
@@ -112,28 +136,29 @@ async def safe_request(method: str, url: str, **kwargs):
             )
 
 #auth middleware
+# auth middleware
 async def verify_token(request: Request):
-    auth_header=request.headers.get("Authorization")
+    auth_header = request.headers.get("Authorization")
 
     if not auth_header:
-        raise HTTPException(401, "No token provided")
+        raise HTTPException(status_code=401, detail="No token provided")
+
+    # Wait until Auth Service is awake
+    await wait_until_service_ready(AUTH_SERVICE, "Auth Service")
 
     try:
-        async with httpx.AsyncClient() as client:
-            res=await client.get(
+        async with httpx.AsyncClient(timeout=120) as client:
+            res = await client.get(
                 f"{AUTH_SERVICE}/verify",
-                headers={"Authorization": auth_header}   
+                headers={"Authorization": auth_header}
             )
-        if res.status_code!=200:
-            raise HTTPException(401,"Invalid token")
+
         return await forward_request(res)
-    except (httpx.ConnectError, httpx.ConnectTimeout, httpx.ReadTimeout) as e:
-        print(f"CONNECTION ERROR during token verification: {str(e)}")
-        import traceback
-        traceback.print_exc()
+
+    except (httpx.ConnectError, httpx.ConnectTimeout, httpx.ReadTimeout):
         raise HTTPException(
             status_code=503,
-            detail="The authentication service is waking up from sleep mode. Please try again in a few seconds."
+            detail="Authentication service is unavailable. Please try again in a few seconds."
         )
     
 # root route for wake-up pings
