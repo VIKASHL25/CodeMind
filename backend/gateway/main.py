@@ -28,11 +28,13 @@ print("GATEWAY ORCHESTRATOR_SERVICE:", ORCHESTRATOR_SERVICE)
 
 
 async def ping_service(url: str):
+    print(f"BACKGROUND WAKE-UP: Pinging {url} to wake it up...")
     try:
         async with httpx.AsyncClient(timeout=60.0) as client:
-            await client.get(url)
-    except Exception:
-        pass
+            res = await client.get(url)
+            print(f"BACKGROUND WAKE-UP: Ping to {url} returned status {res.status_code}")
+    except Exception as e:
+        print(f"BACKGROUND WAKE-UP: Ping to {url} failed: {str(e)}")
 
 def trigger_backend_wakeup():
     asyncio.create_task(ping_service(f"{AUTH_SERVICE}/"))
