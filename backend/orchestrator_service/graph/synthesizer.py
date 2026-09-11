@@ -10,7 +10,7 @@ load_dotenv()
 
 def get_llm(state: AgentState, temperature: float = 0.3):
     api_key = state.get("api_key") or os.getenv("GROQ_API_KEY")
-    return ChatGroq(model="llama-3.3-70b-versatile", temperature=temperature, api_key=api_key)
+    return ChatGroq(model="openai/gpt-oss-120b", temperature=temperature, api_key=api_key)
 
 async def syntesizer_node(state:AgentState)->AgentState:
     agent_outputs=[]
