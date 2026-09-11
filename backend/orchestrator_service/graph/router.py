@@ -10,7 +10,7 @@ load_dotenv()
 
 def get_llm(state: AgentState, temperature: float = 0.1):
     api_key = state.get("api_key") or os.getenv("GROQ_API_KEY")
-    return ChatGroq(model="groq/compound-mini", temperature=temperature, api_key=api_key)
+    return ChatGroq(model="groq/compound", temperature=temperature, api_key=api_key)
 
 CODE_AGENTS=["bug_hunter","code_reviewer","security_auditor","doc_writer"]
 DATA_AGENTS=["data_profiler","stats_analyst","insight_agent","viz_suggester"]
