@@ -10,7 +10,7 @@ load_dotenv()
 
 def get_llm(state: AgentState, temperature: float = 0.2):
     api_key = state.get("api_key") or os.getenv("GROQ_API_KEY")
-    return ChatGroq(model="openai/gpt-oss-120b", temperature=temperature, api_key=api_key)
+    return ChatGroq(model="groq/compound-mini", temperature=temperature, api_key=api_key)
 
 def make_code_agent(agent_name: str, system_prompt: str):
     async def agent(state: AgentState) -> AgentState:
