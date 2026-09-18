@@ -20,8 +20,8 @@ services:
     ports:
       - "8001:8001"
     environment:
-      - MONGO_URL=mongodb+srv://root:Vikashl%401036@vikashl.ys860ze.mongodb.net/?appName=VIKASHL
-      - DB_NAME=codemind
+      - MONGO_URL=${MONGO_URL:-mongodb://mongo:27017}
+      - DB_NAME=${DB_NAME:-codemind}
     depends_on:
       - mongo
     networks:
@@ -36,8 +36,8 @@ services:
     ports:
       - "8002:8002"
     environment:
-      - MONGO_URL=mongodb+srv://root:Vikashl%401036@vikashl.ys860ze.mongodb.net/?appName=VIKASHL
-      - DB_NAME=codemind
+      - MONGO_URL=${MONGO_URL:-mongodb://mongo:27017}
+      - DB_NAME=${DB_NAME:-codemind}
     depends_on:
       - mongo
     networks:

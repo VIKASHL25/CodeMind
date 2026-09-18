@@ -73,7 +73,7 @@ export default function HomePage() {
         <div style={s.statusBox}>
           <div style={s.statusRow}>
             <span style={s.statusDot} />
-            <span style={s.statusText}>Groq llama3-70b</span>
+            <span style={s.statusText}>Groq/compund </span>
           </div>
           <div style={s.statusLabel}>{apiKey ? "Ready" : "Waiting for API Key"}</div>
         </div>

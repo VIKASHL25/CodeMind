@@ -15,8 +15,8 @@ app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], all
 async def root():
     return {"status": "ok", "service": "auth"}
 
-client=motor.motor_asyncio.AsyncIOMotorClient(os.getenv("MONGO_URL"))
-db=client[os.getenv("DB_NAME")]
+client=motor.motor_asyncio.AsyncIOMotorClient(os.getenv("MONGO_URL", "mongodb://localhost:27017"))
+db=client[os.getenv("DB_NAME", "codemind")]
 # CryptContext removed, using bcrypt directly
 SECRET=os.getenv("SECRET_KEY", "changeme")
 
